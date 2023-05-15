@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Drawing;
 using System.IO;
+using System.IO.Ports;
 using System.Linq;
 using System.Windows.Forms;
 using AForge.Video;
 using AForge.Video.DirectShow;
+using System.Diagnostics;
 
 namespace WebcamCapture
 {
@@ -14,9 +16,13 @@ namespace WebcamCapture
         private VideoCaptureDevice FinalFrame;
         private string imgPath = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.FullName + "\\img";
 
+        private System.Diagnostics.Stopwatch Stopwatch = new System.Diagnostics.Stopwatch();
+        private int counter = 0;
+
         public WebcamForm()
         {
             InitializeComponent();
+            InitializeSerialPort();
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -39,13 +45,21 @@ namespace WebcamCapture
             pictureBox.Image = (Bitmap)eventArgs.Frame.Clone();
         }
 
+        
+
         private void btnCapture_Click(object sender, EventArgs e)
         {
             if (!Directory.Exists(imgPath))
             {
                 Directory.CreateDirectory(imgPath);
             }
-            pictureBox.Image.Save(imgPath + "\\capture.jpg");
+            pictureBox.Image.Save(imgPath + $"\\{counter}.jpg");
+            Stopwatch.Stop();
+            Invoke(new Action(() =>
+            {
+                StopwatchLog.AppendText(Stopwatch.ElapsedMilliseconds.ToString()+"\r\n");
+            }));
+            counter += 1;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -80,5 +94,73 @@ namespace WebcamCapture
             }
         }
 
+        /////////////////////////SCANNER START/////////////////////////////////////////////////////
+        private SerialPort _serialPort;
+        private void InitializeSerialPort()
+        {
+            _serialPort = new SerialPort("COM5", 9600, Parity.None, 8, StopBits.One);
+            _serialPort.DataReceived += SerialPort_DataReceived;
+        }
+
+        private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            string data = _serialPort.ReadExisting();
+            Invoke(new Action(() =>
+            {
+                if (data.StartsWith("http"))
+                {
+                    Stopwatch.Restart();
+                    Stopwatch.Start();
+                    outputTextBox.AppendText(counter.ToString() + " " + data);
+                    btnCapture_Click(null, null);
+                }
+            }));
+        }
+
+        private void ConnectScannerButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (!_serialPort.IsOpen)
+                {
+                    _serialPort.Open();
+                    ConnectScannerButton.Text = "Disconnect";
+                }
+                else
+                {
+                    _serialPort.Close();
+                    ConnectScannerButton.Text = "Connect";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        bool activate = false;
+
+        private void ActivateScannerButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (!activate)
+                {
+                    _serialPort.Write("Z");
+                    ActivateScannerButton.Text = "Deactivate Scanner";
+                    activate = true;
+                }
+                else
+                {
+                    _serialPort.Write("Y");
+                    ActivateScannerButton.Text = "Activate Scanner";
+                    activate = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
     }
 }
