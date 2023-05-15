@@ -8,13 +8,13 @@ using AForge.Video.DirectShow;
 
 namespace WebcamCapture
 {
-    public partial class MainForm : Form
+    public partial class WebcamForm : Form
     {
         private FilterInfoCollection CaptureDevice;
         private VideoCaptureDevice FinalFrame;
         private string imgPath = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.FullName + "\\img";
 
-        public MainForm()
+        public WebcamForm()
         {
             InitializeComponent();
         }

@@ -3,7 +3,7 @@ using System;
 
 namespace WebcamCapture
 {
-    partial class MainForm : Form
+    partial class WebcamForm : Form
     {
         private System.ComponentModel.IContainer components = null;
         private PictureBox pictureBox;
